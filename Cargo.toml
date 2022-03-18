@@ -6,8 +6,7 @@ description = "Easily convert HashMap<K, V> to constant [(K, V); N] values."
 documentation = "https://docs.rs/map-to-const"
 repository = "https://github.com/rnag/map-to-const"
 readme = "README.md"
-keywords = ["map-to-const", "hashmap",
-            "const", "constants", "compile-time", "build"]
+keywords = ["hashmap", "const", "constants", "compile-time", "build"]
 categories = ["accessibility", "config", "development-tools::build-utils"]
 license = "MIT"
 edition = "2021"
