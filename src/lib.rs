@@ -1,6 +1,6 @@
-// #![deny(warnings)]
-// #![warn(rust_2018_idioms)]
-// #![warn(missing_docs)]
+#![doc(html_root_url = "https://docs.rs/map-to-const/0.1")]
+#![warn(rust_2018_idioms, missing_docs)]
+#![deny(warnings, dead_code, unused_imports, unused_mut)]
 
 //! [![github]](https://github.com/rnag/map-to-const)&ensp;[![crates-io]](https://crates.io/crates/map-to-const)&ensp;[![docs-rs]](https://docs.rs/map-to-const)
 //!
@@ -10,20 +10,27 @@
 //!
 //! <br>
 //!
-//! Easily convert HashMap<K, V> to constant [(K, V); N] values.
+//! Easily convert `HashMap<K, V>` to constant `[(K, V); N]` values.
 //!
 //! <br>
 //!
 //! ## Usage
 //!
-//! ```no_run
+//! ```rust
 //! use map_to_const::*;
+//! use std::collections::HashMap;
 //!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     println!("Hello world!");
+//! fn main() {
+//!     // Create a HashMap in some manner. Ideally, this will be formatted and returned
+//!     // in an API response or similar.
+//!     let my_map = HashMap::from([("hello", "world"), ("testing", "123")]);
 //!
-//!     Ok(())
+//!     let const_value = map_to_const(&my_map, None);
+//!
+//!     println!("{const_value}");
+//!
+//!     // later in code, construct the hashmap from the `const` slice:
+//!     // let my_map = HashMap::from(MY_MAP);
 //! }
 //! ```
 //!
@@ -40,12 +47,179 @@
 //! [crates.io]: https://crates.io/crates/map-to-const
 //! [`README.md`]: https://github.com/rnag/map-to-const
 //!
+use std::collections::{BTreeMap, HashMap};
+
+pub(crate) const DEFAULT_CONST_NAME: &str = "my_map";
+pub(crate) const INDENT: &str = "  ";
+
+/// Trait to retrieve the string value of a type.
+///
+/// Credits:
+/// <https://stackoverflow.com/a/56100816/10237506>
+pub trait ExtTypeName {
+    /// Retrieve the string value of a type.
+    fn type_name(&self) -> &str
+    where
+        Self: Sized;
+}
+
+impl ExtTypeName for String {
+    fn type_name(&self) -> &str {
+        "&str"
+    }
+}
+
+macro_rules! impl_type_name {
+    (for $($t:ty),+) => {
+        $(impl ExtTypeName for $t {
+
+            fn type_name(&self) -> &str {
+                stringify!($t)
+            }
+        })*
+    }
+}
+
+impl_type_name!(for &str, str, bool, char, usize,
+                    u8, u16, u32, u64, u128,
+                    i8, i16, i32, i64, i128,
+                    f32, f64);
+
+/// Converts a `HashMap<K, V>` to a `const` or constant `[(K, V); N]`
+/// string representation, where `N` is the number of key-value pairs in the
+/// input *map* object.
+///
+/// # Example
+///
+/// ```rust
+/// use map_to_const::*;
+///
+/// let const_value = map_to_const(
+///   &std::collections::HashMap::from([("hello", "world"), ("testing", "123")]),
+///   "my_const_name"
+/// );
+/// ```
+///
+/// # Errors
+///
+/// Panics if the input `HashMap` object is empty.
+///
+pub fn map_to_const<
+    'a,
+    K: ExtTypeName + std::fmt::Debug + std::cmp::Ord,
+    V: ExtTypeName + std::fmt::Debug,
+>(
+    map: &HashMap<K, V>,
+    const_name: impl Into<Option<&'a str>>,
+) -> String {
+    let const_name = const_name
+        .into()
+        .unwrap_or(DEFAULT_CONST_NAME)
+        .replace(' ', "_")
+        .replace('-', "_")
+        .to_uppercase();
+
+    let map_iter = map.iter();
+    let (k, v) = map.iter().nth(0).unwrap();
+
+    let mut const_define = format!(
+        "const {name}: [({kt}, {vt}); {len}] = ",
+        name = const_name,
+        kt = k.type_name(),
+        vt = v.type_name(),
+        len = map.len()
+    );
+
+    const_define.push('[');
+
+    let sorted_map = BTreeMap::from_iter(map_iter);
+
+    for (key, value) in sorted_map {
+        let fmt = format!("\n{0}({1:?}, {2:?}),", INDENT, key, value);
+        const_define.push_str(&fmt);
+    }
+
+    const_define.push('\n');
+    const_define.push(']');
+    const_define.push(';');
+
+    const_define
+}
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    use indoc::indoc;
+    use log::*;
+    use std::collections::HashMap;
+
     #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+    fn test_simple() {
+        sensible_env_logger::try_init!().unwrap_or_default();
+
+        let my_map = HashMap::from([("hello", "world"), ("testing", "123")]);
+
+        let const_value = map_to_const(&my_map, None);
+
+        trace!("RESULT:\n---\n{}", const_value);
+
+        assert_eq!(
+            const_value,
+            indoc! {r#"
+                const MY_MAP: [(&str, &str); 2] = [
+                  ("hello", "world"),
+                  ("testing", "123"),
+                ];
+            "#}
+            .trim_end()
+        );
+    }
+
+    #[test]
+    fn test_with_numeric_keys() {
+        sensible_env_logger::try_init!().unwrap_or_default();
+
+        let my_map = HashMap::from([
+            (1122334455u64, "world".to_owned()),
+            (9876543210u64, "123".to_owned()),
+        ]);
+
+        let const_value = map_to_const(&my_map, "my map value");
+
+        trace!("RESULT:\n---\n{}", const_value);
+
+        assert_eq!(
+            const_value,
+            indoc! {r#"
+                const MY_MAP_VALUE: [(u64, &str); 2] = [
+                  (1122334455, "world"),
+                  (9876543210, "123"),
+                ];
+            "#}
+            .trim_end()
+        );
+    }
+
+    #[test]
+    fn test_with_boolean_keys() {
+        sensible_env_logger::try_init!().unwrap_or_default();
+
+        let my_map = HashMap::from([(true, 123.45), (false, 54.321)]);
+
+        let const_value = map_to_const(&my_map, "my-bool-map");
+
+        trace!("RESULT:\n---\n{}", const_value);
+
+        assert_eq!(
+            const_value,
+            indoc! {r#"
+                const MY_BOOL_MAP: [(bool, f64); 2] = [
+                  (false, 54.321),
+                  (true, 123.45),
+                ];
+            "#}
+            .trim_end()
+        );
     }
 }
