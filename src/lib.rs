@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/map-to-const/0.1")]
+#![doc(html_root_url = "https://docs.rs/map-to-const/0.2")]
 #![warn(rust_2018_idioms, missing_docs)]
 #![deny(warnings, dead_code, unused_imports, unused_mut)]
 
@@ -21,9 +21,9 @@
 //! use std::collections::HashMap;
 //!
 //! fn main() {
-//!     // Create a HashMap in some manner. Ideally, this will be formatted and returned
-//!     // in an API response or similar.
-//!     let my_map = HashMap::from([("hello", "world"), ("testing", "123")]);
+//!     // Create a HashMap in some manner. Ideally, this will be formatted
+//!     // and returned in an API response or similar.
+//!     let my_map = HashMap::from([("testing", "123"), ("hello", "world")]);
 //!
 //!     let const_value = map_to_const(&my_map, None);
 //!
@@ -52,7 +52,7 @@ use std::collections::{BTreeMap, HashMap};
 pub(crate) const DEFAULT_CONST_NAME: &str = "my_map";
 pub(crate) const INDENT: &str = "  ";
 
-/// Trait to retrieve the string value of a type.
+/// Trait to retrieve the string value (i.e. name) of a type.
 ///
 /// Credits:
 /// <https://stackoverflow.com/a/56100816/10237506>
@@ -120,7 +120,7 @@ pub fn map_to_const<
         .to_uppercase();
 
     let map_iter = map.iter();
-    let (k, v) = map.iter().nth(0).unwrap();
+    let (k, v) = map.iter().next().unwrap();
 
     let mut const_define = format!(
         "const {name}: [({kt}, {vt}); {len}] = ",
@@ -156,9 +156,9 @@ mod tests {
 
     #[test]
     fn test_simple() {
-        sensible_env_logger::try_init!().unwrap_or_default();
+        sensible_env_logger::safe_init!();
 
-        let my_map = HashMap::from([("hello", "world"), ("testing", "123")]);
+        let my_map = HashMap::from([("testing", "123"), ("hello", "world")]);
 
         let const_value = map_to_const(&my_map, None);
 
@@ -178,11 +178,11 @@ mod tests {
 
     #[test]
     fn test_with_numeric_keys() {
-        sensible_env_logger::try_init!().unwrap_or_default();
+        sensible_env_logger::safe_init!();
 
         let my_map = HashMap::from([
-            (1122334455u64, "world".to_owned()),
             (9876543210u64, "123".to_owned()),
+            (1122334455u64, "world".to_owned()),
         ]);
 
         let const_value = map_to_const(&my_map, "my map value");
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_with_boolean_keys() {
-        sensible_env_logger::try_init!().unwrap_or_default();
+        sensible_env_logger::safe_init!();
 
         let my_map = HashMap::from([(true, 123.45), (false, 54.321)]);
 
