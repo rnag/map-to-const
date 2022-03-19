@@ -13,9 +13,9 @@ fn main() {
 
     // Create a HashMap in some manner. Ideally, this will be formatted and returned
     // in an API response or similar.
-    let my_map = HashMap::from([("hello", "world"), ("testing", "123")]);
+    let my_map = HashMap::from([("testing", "123"), ("hello", "world")]);
 
-    let const_value = map_to_const(&my_map, "my const name");
+    let const_value = map_to_const(&my_map, None);
 
     trace!("Result:");
     trace!("---");

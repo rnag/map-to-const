@@ -31,7 +31,7 @@ version-sync = "0.9.4"
 # cargo-bump = "1.1.0"
 # logging utilities
 log = "^0.4"
-sensible-env-logger = "0.1.0"
+sensible-env-logger = "^0.2"
 indoc = "1.0.4"
 
 ### FEATURES #################################################################

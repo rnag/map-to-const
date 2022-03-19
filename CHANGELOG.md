@@ -17,6 +17,10 @@ Possible header types:
   - `other_method()`
 -->
 
+## v0.2.0 (2022-03-19)
+
+- Fix up docs and examples
+
 ## v0.1.0 (2022-03-18)
 
 - Initial Release on [crates.io] :tada:
