@@ -1,6 +1,6 @@
 [package]
 name = "map-to-const"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Ritvik Nag <rv.kvetch@gmail.com>"]
 description = "Easily convert HashMap<K, V> to constant [(K, V); N] values."
 documentation = "https://docs.rs/map-to-const"
