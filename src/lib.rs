@@ -120,7 +120,7 @@ pub fn map_to_const<
         .to_uppercase();
 
     let map_iter = map.iter();
-    let (k, v) = map.iter().nth(0).unwrap();
+    let (k, v) = map.iter().next().unwrap();
 
     let mut const_define = format!(
         "const {name}: [({kt}, {vt}); {len}] = ",
